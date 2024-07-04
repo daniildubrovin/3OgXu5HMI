@@ -1,0 +1,27 @@
+type Product {
+    Code: String
+    Model: String
+    Description: String
+    Country: String
+    Price: String
+}
+
+input ProductInput {
+    Code: String
+    Model: String
+    Description: String
+    Country: String
+    Price: String
+}
+
+input ProductItem {
+    Code: String
+    Quantity: Int
+}
+
+type Query {
+    allProducts: [Product]
+    addProduct(product: ProductInput): String
+    deleteProduct(code: String): String
+    newOrder(productItems: [ProductItem]): String
+}

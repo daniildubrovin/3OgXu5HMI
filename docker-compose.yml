@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  graphql:
+    build: ./GraphQLService/
+    ports:
+      - "8087:8087"
+    networks:
+      - local-network
+
+  products:
+    build: ./ProductService/
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres/productDB
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+    networks:
+      - local-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  inventory:
+    build: ./InventoryService/
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres/productDB
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+    networks:
+      - local-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  order:
+    build: ./OrderService/
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb://user:1234@mongo:27017/productDB?authSource=admin
+      - GRPC_CLIENT_INVENTORY-SERVICE_ADDRESS=static://inventory:9090
+      - SPRING_KAFKA_PRODUCER_BOOTSTRAP-SERVERS=product_kafka:29092
+    networks:
+      - local-network
+    depends_on:
+      - mongo
+  
+  notifications:
+    build: ./NotificationService/
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb://user:1234@mongo:27017/productDB?authSource=admin
+      - SPRING_KAFKA_CONSUMER_BOOTSTRAP-SERVERS=product_kafka:29092
+      - SPRING_KAFKA_PRODUCER_BOOTSTRAP-SERVERS=product_kafka:29092
+    networks:
+      - local-network
+    depends_on:
+      - mongo
+
+  # shopview:
+  #   build: ./ShopView/
+  #   ports:
+  #     - "8085:8085"
+  #   environment:
+  #   networks:
+  #     - local-network
+
+  mongo:
+    image: mongo
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user
+      MONGO_INITDB_ROOT_PASSWORD: 1234
+    networks:
+      - local-network
+
+  postgres:
+    image: "postgres:14.7-alpine"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=productDB
+    user: postgres
+    ports:
+      - "5433:5432"
+    networks:
+      - local-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready", "--quiet" ]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  product_kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - product_zookeeper
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: product_zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://product_kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - local-network
+
+  product_kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: product_kafka-ui
+    ports:
+      - 8090:8080
+    restart: always
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=product_kafka:29092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=product_zookeeper:2181
+    links:
+      - product_kafka
+      - product_zookeeper
+    networks:
+      - local-network
+
+  product_zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "22181:2181"
+    networks:
+      - local-network
+
+networks:
+  local-network:

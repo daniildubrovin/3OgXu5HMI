@@ -1,0 +1,8 @@
+rootProject.name = 'ProductApp'
+
+include 'ProductService'
+include 'OrderService'
+include 'InventoryService'
+include 'NotificationService'
+include 'GraphQLService'
+include 'ShopView'

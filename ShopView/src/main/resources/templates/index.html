@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Order</title>
+</head>
+<body>
+    <h3>order</h3>
+    <form method="post" action="#" th:action="@{/order}" th:object="${form}">
+        <div th:each="product, i : ${products}">
+            <input type="checkbox" th:value="${product.Code}" th:field="*{items[__${i.index}__].Code}"/>
+            <span th:text="${product.Model}"></span>&nbsp;
+            <span th:text="${product.Description}"></span>&nbsp;
+            <span th:text="${product.Country}"></span>&nbsp;
+            <span th:text="${product.Price}"></span>&nbsp;
+            <input type="number" th:name="${product.Code}" th:field="*{items[__${i.index}__].Quantity}"/>
+        </div>
+        <button>create orders</button>
+    </form>
+
+</body>
+</html>

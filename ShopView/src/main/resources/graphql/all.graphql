@@ -1,0 +1,9 @@
+query {
+  allProducts{
+    Code
+    Model 
+    Description
+    Country
+    Price
+  }
+}
